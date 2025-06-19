@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Validación TAG vs AIG (Corregido)</title>
+  <style>
+    /* ----- ESTILOS GENERALES Y VARIABLES ----- */
+    :root {
+      --azul-principal: #003366;
+      --azul-secundario: #00509e;
+      --gris-fondo: #f4f7fa;
+      --gris-borde: #d1d9e6;
+      --blanco: #ffffff;
+      --verde-exito: #28a745;
+      --rojo-error: #dc3545;
+      --sombra: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --radio-borde: 12px;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--gris-fondo);
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 1.5rem;
+      box-sizing: border-box;
+    }
+
+    /* ----- CONTENEDOR PRINCIPAL ----- */
+    .container {
+      background: var(--blanco);
+      border: 1px solid var(--gris-borde);
+      border-radius: var(--radio-borde);
+      max-width: 550px;
+      width: 100%;
+      padding: 2rem;
+      box-shadow: var(--sombra);
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--azul-principal);
+      font-size: 1.75rem;
+      margin-top: 0;
+      margin-bottom: 2rem;
+    }
+
+    /* ----- FORMULARIO Y BOTONES ----- */
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 0.85rem;
+      margin-bottom: 1.25rem;
+      border: 1px solid var(--gris-borde);
+      border-radius: 8px;
+      font-size: 1rem;
+      box-sizing: border-box;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--azul-secundario);
+      box-shadow: 0 0 0 3px rgba(0, 80, 158, 0.2);
+    }
+
+    .button-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    
+    button {
+      background-color: #6c757d;
+      color: var(--blanco);
+      padding: 0.85rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+    
+    button:hover {
+      background-color: #5a6268;
+    }
+
+    button:active {
+        transform: scale(0.98);
+    }
+
+    /* ----- NOTIFICACIONES Y RESULTADOS ----- */
+    #notification {
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: 500;
+      display: none; /* Oculto por defecto */
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    }
+    #notification.success { background-color: #e9f7ef; color: #1d6c3f; border: 1px solid #a3e9c3; display: block;}
+    #notification.error { background-color: #fdeded; color: #9c2a2a; border: 1px solid #f9c6c6; display: block;}
+
+    #summary {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background-color: #eef2f7;
+        border-radius: 8px;
+        text-align: center;
+    }
+    #summary > div {
+        flex: 1;
+    }
+    #summary .count {
+        display: block;
+        font-size: 1.75rem;
+        font-weight: 700;
+    }
+    #summary .label {
+        font-size: 0.9rem;
+        color: #555;
+    }
+    #count-exitosos { color: var(--verde-exito); }
+    #count-fallidos { color: var(--rojo-error); }
+    #count-total { color: var(--azul-principal); }
+
+    .result {
+      margin-top: 1.5rem;
+      font-size: 0.9rem;
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid var(--gris-borde);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      background-color: #fdfdfd;
+    }
+    .result-item {
+        padding: 0.8rem;
+        margin-bottom: 0.5rem;
+        border-radius: 6px;
+        white-space: pre-wrap; /* Mantiene los saltos de línea */
+        word-wrap: break-word; /* Rompe palabras largas */
+    }
+    .result-item.success { background-color: #e9f7ef; border-left: 5px solid var(--verde-exito); }
+    .result-item.failure { background-color: #fdeded; border-left: 5px solid var(--rojo-error); }
+
+    /* Estilos para el modal */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: auto;
+        padding: 25px;
+        border: 1px solid #888;
+        border-radius: 12px;
+        width: 80%;
+        max-width: 450px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        text-align: center;
+    }
+
+    .modal-content h3 {
+        margin-top: 0;
+        color: var(--azul-principal);
+        font-size: 1.5rem;
+    }
+
+    .modal-content input[type="text"] {
+        margin-bottom: 1rem;
+        width: calc(100% - 20px);
+    }
+
+    .modal-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .modal-buttons button {
+        flex: 1;
+        max-width: 150px;
+    }
+
+    .modal-buttons .confirm-button {
+        background-color: var(--verde-exito);
+    }
+
+    .modal-buttons .confirm-button:hover {
+        background-color: #218838;
+    }
+
+    .modal-buttons .cancel-button {
+        background-color: #dc3545;
+    }
+
+    .modal-buttons .cancel-button:hover {
+        background-color: #c82333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Validación TAG vs AIG</h1>
+
+    <div id="notification"></div>
+
+    <label for="tag">Código TAG (Barras)</label>
+    <input type="text" id="tag" placeholder="Escanee el código de barras..." autofocus>
+
+    <label for="aig">Código AIG (QR)</label>
+    <input type="text" id="aig" placeholder="Escanee el código QR...">
+    
+    <div class="button-group">
+      <button onclick="terminarValidacion()">Terminar Validación</button>
+      <button onclick="descargarReporte()">Descargar Reporte</button>
+    </div>
+
+    <div id="summary">
+        <div>
+            <span id="count-exitosos" class="count">0</span>
+            <span class="label">Éxitosos</span>
+        </div>
+        <div>
+            <span id="count-fallidos" class="count">0</span>
+            <span class="label">Fallidos</span>
+        </div>
+        <div>
+            <span id="count-total" class="count">0</span>
+            <span class="label">Total</span>
+        </div>
+    </div>
+
+    <div id="resultados" class="result"></div>
+    
+  </div>
+
+  <!-- Modal para solicitar nombre y packing list -->
+  <div id="reportModal" class="modal">
+    <div class="modal-content">
+      <h3>Generar Reporte</h3>
+      <label for="userNameInput">Nombre de quien generó la validación:</label>
+      <input type="text" id="userNameInput" placeholder="Tu nombre">
+      <label for="packingListInput">Número de Packing List:</label>
+      <input type="text" id="packingListInput" placeholder="Ej: PL-12345">
+      <div class="modal-buttons">
+        <button class="confirm-button" onclick="confirmDownload()">Generar</button>
+        <button class="cancel-button" onclick="closeModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    // ----- VARIABLES GLOBALES -----
+    let validaciones = [];
+    let tagsScaneados = new Set();
+    let aigsScaneados = new Set();
+    let conteoExitosos = 0;
+    let conteoFallidos = 0;
+
+    // ----- MANEJADORES DE EVENTOS -----
+    
+    document.getElementById('tag').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('aig').focus();
+        }
+    });
+
+    document.getElementById('aig').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault(); 
+            const tagValue = document.getElementById('tag').value.trim();
+            const aigValue = document.getElementById('aig').value.trim();
+            if (tagValue && aigValue) {
+                validar();
+            }
+        }
+    });
+
+    // ----- FUNCIONES PRINCIPALES -----
+
+    function mostrarNotificacion(message, type) {
+        const notifDiv = document.getElementById('notification');
+        notifDiv.textContent = message;
+        notifDiv.className = type;
+        notifDiv.style.opacity = '1';
+        setTimeout(() => {
+            notifDiv.style.opacity = '0';
+            setTimeout(() => notifDiv.className = '', 500);
+        }, 3000);
+    }
+    
+    function limpiarYEnfocar() {
+      document.getElementById("tag").value = '';
+      document.getElementById("aig").value = '';
+      document.getElementById("tag").focus();
+    }
+
+    function actualizarResumen() {
+        document.getElementById('count-exitosos').textContent = conteoExitosos;
+        document.getElementById('count-fallidos').textContent = conteoFallidos;
+        document.getElementById('count-total').textContent = conteoExitosos + conteoFallidos;
+    }
+
+    function validar() {
+      const tag = document.getElementById("tag").value.trim();
+      const aig = document.getElementById("aig").value.trim();
+
+      if (!tag || !aig) return;
+
+      if (tagsScaneados.has(tag)) {
+          mostrarNotificacion("Este código TAG ya fue escaneado.", "error");
+          limpiarYEnfocar();
+          return;
+      }
+      if (aigsScaneados.has(aig)) {
+          mostrarNotificacion("Este código AIG ya fue escaneado.", "error");
+          limpiarYEnfocar();
+          return;
+      }
+
+      const tagSub = tag.slice(7, 13);
+      const aigSub = aig.slice(18, 24);
+      
+      let esExito = tagSub.length === 6 && aigSub.length === 6 && tagSub === aigSub;
+
+      const item = tag.slice(1, 7); 
+      const cantidad = parseInt(tag.slice(14, 20), 10) || 0;
+
+      if (esExito) {
+          conteoExitosos++;
+      } else {
+          conteoFallidos++;
+      }
+      actualizarResumen();
+      
+      tagsScaneados.add(tag);
+      aigsScaneados.add(aig);
+
+      const detalleParaReporte = {
+          item: item,
+          cantidad: cantidad,
+          resultado: esExito ? "ÉXITO" : "FALLO",
+      };
+      validaciones.push(detalleParaReporte);
+      
+      let resultadoTexto = esExito ? `Validación Exitosa\nTAG: ${tagSub} == AIG: ${aigSub}` : `Validación Fallida\nTAG: ${tagSub} != AIG: ${aigSub}`;
+      if (tagSub.length !== 6 || aigSub.length !== 6) {
+          resultadoTexto = `Longitud incorrecta\nTAG [${tagSub.length}]: '${tagSub}'\nAIG [${aigSub.length}]: '${aigSub}'`;
+      }
+
+      const resultadosDiv = document.getElementById("resultados");
+      const bloqueResultado = document.createElement("div");
+      bloqueResultado.className = `result-item ${esExito ? 'success' : 'failure'}`;
+      bloqueResultado.textContent = `TAG: ${tag}\nAIG: ${aig}\n${esExito ? '✔' : '✖'} ${resultadoTexto}`;
+      
+      resultadosDiv.prepend(bloqueResultado);
+      
+      limpiarYEnfocar();
+    }
+
+    function terminarValidacion() {
+      mostrarNotificacion("✔ Proceso de validación finalizado. Puede generar el reporte.", "success");
+    }
+
+    // Funciones para el modal
+    function openModal() {
+        document.getElementById('reportModal').style.display = 'flex';
+        document.getElementById('userNameInput').focus();
+    }
+
+    function closeModal() {
+        document.getElementById('reportModal').style.display = 'none';
+        document.getElementById('userNameInput').value = '';
+        document.getElementById('packingListInput').value = '';
+    }
+
+    function descargarReporte() {
+      if (validaciones.length === 0) {
+          mostrarNotificacion("⚠ No hay datos para generar un reporte.", "error");
+          return;
+      }
+      openModal(); // Abre el modal en lugar del prompt
+    }
+
+    function confirmDownload() {
+        const usuario = document.getElementById('userNameInput').value.trim();
+        const packingList = document.getElementById('packingListInput').value.trim();
+
+        if (!usuario) {
+            mostrarNotificacion("Por favor, ingresa tu nombre.", "error");
+            return;
+        }
+        if (!packingList) {
+            mostrarNotificacion("Por favor, ingresa el número de Packing List.", "error");
+            return;
+        }
+
+        closeModal(); // Cierra el modal
+
+        const resumenItems = {};
+        validaciones.forEach(val => {
+            if (resumenItems[val.item]) {
+                resumenItems[val.item].cantidad += val.cantidad;
+                resumenItems[val.item].cajas += 1;
+            } else {
+                resumenItems[val.item] = {
+                    cantidad: val.cantidad,
+                    cajas: 1
+                };
+            }
+        });
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.text("Reporte de Validaciones TAG vs AIG", 105, 15, null, null, 'center');
+        
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Generado por: ${usuario}`, 15, 25);
+        doc.text(`Packing List: ${packingList}`, 15, 32); // Nuevo campo de Packing List
+        doc.text(`Fecha: ${new Date().toLocaleDateString('es-MX')} ${new Date().toLocaleTimeString('es-MX')}`, 15, 39);
+
+        let y = 49; // Ajusta la posición Y inicial debido al nuevo campo
+        doc.setFont(undefined, 'bold');
+        doc.text("Resumen de Validaciones:", 15, y);
+        y += 7;
+        doc.setFont(undefined, 'normal');
+        doc.text(`- Validaciones Exitosas: ${conteoExitosos}`, 20, y);
+        y += 7;
+        doc.text(`- Validaciones Fallidas: ${conteoFallidos}`, 20, y);
+        y += 7;
+        doc.text(`- Total de Escaneos: ${validaciones.length}`, 20, y);
+        
+        y += 15;
+        doc.setFont(undefined, 'bold');
+        doc.text("Resumen por Item:", 15, y);
+        y += 7;
+        
+        doc.text("Código de Item", 15, y);
+        doc.text("Cant. de Cajas", 100, y);
+        doc.text("Cant. Total Piezas", 150, y);
+        doc.line(15, y + 2, 195, y + 2); 
+        y += 8;
+
+        doc.setFont(undefined, 'normal');
+        
+        // Se inicializan contadores para los totales generales.
+        let totalGeneralCajas = 0;
+        let totalGeneralPiezas = 0;
+
+        for (const item in resumenItems) {
+          if (y > 280) { 
+            doc.addPage();
+            y = 15;
+          }
+          const itemData = resumenItems[item];
+          doc.text(item, 15, y);
+          doc.text(itemData.cajas.toString(), 100, y);
+          doc.text(itemData.cantidad.toString(), 150, y);
+          
+          // Se acumulan los valores en los contadores generales.
+          totalGeneralCajas += itemData.cajas;
+          totalGeneralPiezas += itemData.cantidad;
+          
+          y += 7;
+        }
+
+        // Se dibuja una línea para separar el detalle de los totales.
+        y += 2;
+        doc.line(15, y, 195, y);
+        y += 8;
+
+        // Se escribe la fila de totales en negrita.
+        doc.setFont(undefined, 'bold');
+        doc.text("Totales Generales:", 15, y);
+        doc.text(totalGeneralCajas.toString(), 100, y);
+        doc.text(totalGeneralPiezas.toString(), 150, y);
+        
+        // El nombre del archivo ahora incluye el número de packing list
+        doc.save(`${packingList}_reporte_validacion.pdf`); 
+        limpiarYEnfocar();
+    }
+    
+    window.onload = actualizarResumen;
+  </script>
+</body>
+</html>
